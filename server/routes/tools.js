@@ -30,21 +30,40 @@ router.get('/', async (req, res) => {
     `);
 
     // Processar histórico de produção
-    const processedTools = tools.map(tool => ({
-      id: tool.id,
-      moldId: tool.mold_id,
-      toolId: tool.tool_id,
-      usefulLife: tool.useful_life,
-      accumulatedProduction: tool.accumulated_production,
-      status: tool.status,
-      notes: tool.notes || '',
-      warning: Boolean(tool.warning),
-      isActive: Boolean(tool.is_active),
-      lastUpdate: new Date(tool.updated_at).toLocaleDateString('pt-BR'),
-      productionHistory: tool.production_history 
-        ? tool.production_history.split(',').map(item => JSON.parse(item))
-        : []
-    }));
+    const processedTools = tools.map(tool => {
+      let productionHistory = [];
+      
+      if (tool.production_history) {
+        try {
+          // Tentar fazer o parse do JSON
+          productionHistory = tool.production_history.split(',').map(item => {
+            try {
+              return JSON.parse(item);
+            } catch (e) {
+              console.warn('Erro ao fazer parse do item de histórico:', item);
+              return null;
+            }
+          }).filter(item => item !== null);
+        } catch (e) {
+          console.warn('Erro ao processar histórico de produção:', e);
+          productionHistory = [];
+        }
+      }
+
+      return {
+        id: tool.id,
+        moldId: tool.mold_id,
+        toolId: tool.tool_id,
+        usefulLife: tool.useful_life,
+        accumulatedProduction: tool.accumulated_production,
+        status: tool.status,
+        notes: tool.notes || '',
+        warning: Boolean(tool.warning),
+        isActive: Boolean(tool.is_active),
+        lastUpdate: new Date(tool.updated_at).toLocaleDateString('pt-BR'),
+        productionHistory: productionHistory
+      };
+    });
 
     res.json(processedTools);
   } catch (error) {
